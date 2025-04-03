@@ -1,7 +1,8 @@
+import { inject } from '@angular/core';
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+
 import { catchError, throwError } from 'rxjs';
 import { MensagemErroService } from '../services/mensagem-erro.service';
-import { inject } from '@angular/core';
 
 export const erroInterceptor: HttpInterceptorFn = (req, next) => {
 
