@@ -1,17 +1,138 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpHandlerFn, HttpInterceptorFn, HttpResponse, HttpRequest, HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 
-import { erroInterceptor } from './erro.interceptor';
+import { erroInterceptor, MENSAGENS_ERRO } from './erro.interceptor';
+import { of, throwError } from 'rxjs';
+import { MensagemErroService } from '../services/mensagem-erro.service';
 
 describe('erroInterceptor', () => {
+  let mensagemErroService: MensagemErroService;
+  let requestMock: HttpRequest<any>;
+  let nextMock: HttpHandlerFn;
+
   const interceptor: HttpInterceptorFn = (req, next) =>
     TestBed.runInInjectionContext(() => erroInterceptor(req, next));
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      providers: [MensagemErroService]
+    });
+
+    mensagemErroService = TestBed.inject(MensagemErroService);
+
+    nextMock = jest.fn().mockImplementation((req: HttpRequest<any>) =>
+      of(new HttpResponse({ status: 200, body: { sucesso: true } }))
+    );
+
+    requestMock = new HttpRequest('GET', '/api/teste');
+
+    jest.spyOn(mensagemErroService, 'mostrarMensagemDeErro');
   });
 
-  it('should be created', () => {
+  it('deve ser criado', () => {
     expect(interceptor).toBeTruthy();
+  });
+
+  it('deve continuar a requisição sem modificação', (done) => {
+    interceptor(requestMock, nextMock).subscribe({
+      next: (res) => {
+        expect(nextMock).toHaveBeenCalledWith(requestMock);
+        done();
+      }
+    });
+  });
+
+  it('deve permitir requisições sem erro passarem normalmente', (done) => {
+    interceptor(requestMock, nextMock).subscribe({
+      next: (res) => {
+        expect(res).toEqual(new HttpResponse({ status: 200, body: { sucesso: true } }));
+        expect(mensagemErroService.mostrarMensagemDeErro).not.toHaveBeenCalled();
+        done();
+      }
+    });
+  });
+
+  it('deve capturar erro de rede (status 0)', (done) => {
+    nextMock = jest.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+
+    interceptor(requestMock, nextMock).subscribe({
+      error: () => {
+        expect(mensagemErroService.mostrarMensagemDeErro).toHaveBeenCalledWith(MENSAGENS_ERRO[0]);
+        done();
+      }
+    });
+  });
+
+  it('deve capturar erro 404 e exibir mensagem correta', (done) => {
+    nextMock = jest.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status: 404 })));
+
+    interceptor(requestMock, nextMock).subscribe({
+      error: () => {
+        expect(mensagemErroService.mostrarMensagemDeErro).toHaveBeenCalledWith(MENSAGENS_ERRO[404]);
+        done();
+      }
+    });
+  });
+
+  it('deve capturar erro 500 e exibir mensagem correta', (done) => {
+    nextMock = jest.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+    interceptor(requestMock, nextMock).subscribe({
+      error: () => {
+        expect(mensagemErroService.mostrarMensagemDeErro).toHaveBeenCalledWith(MENSAGENS_ERRO[500]);
+        done();
+      }
+    });
+  });
+
+  it('deve capturar erro 403 e exibir mensagem correta', (done) => {
+    nextMock = jest.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403 })));
+
+    interceptor(requestMock, nextMock).subscribe({
+      error: () => {
+        expect(mensagemErroService.mostrarMensagemDeErro).toHaveBeenCalledWith(MENSAGENS_ERRO[403]);
+        done();
+      }
+    });
+  });
+
+  it('deve capturar erro 401 e exibir mensagem correta', (done) => {
+    nextMock = jest.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
+
+    interceptor(requestMock, nextMock).subscribe({
+      error: () => {
+        expect(mensagemErroService.mostrarMensagemDeErro).toHaveBeenCalledWith(MENSAGENS_ERRO[401]);
+        done();
+      }
+    });
+  });
+
+  it('deve capturar erro desconhecido e exibir mensagem genérica', (done) => {
+    nextMock = jest.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status: 418 })));
+
+    interceptor(requestMock, nextMock).subscribe({
+      error: () => {
+        expect(mensagemErroService.mostrarMensagemDeErro).toHaveBeenCalledWith(
+          MENSAGENS_ERRO[418] || 'Ocorreu um erro inesperado'
+        );
+        done();
+      }
+    });
+  });
+
+  it('deve continuar a requisição mesmo sem MensagemErroService', (done) => {
+    jest.spyOn(TestBed, 'inject').mockReturnValue(null);
+
+    nextMock = jest.fn().mockImplementation((req: HttpRequest<any>) =>
+      of(new HttpResponse({ status: 200, body: { sucesso: true } }))
+    );
+
+    interceptor(requestMock, nextMock).subscribe({
+      next: (res) => {
+        expect(res).toEqual(new HttpResponse({ status: 200, body: { sucesso: true } }));
+        expect(mensagemErroService.mostrarMensagemDeErro).not.toHaveBeenCalled();
+        done();
+      }
+    });
   });
 });
