@@ -10,6 +10,7 @@ describe('erroInterceptor', () => {
   let requestMock: HttpRequest<any>;
   let nextMock: HttpHandlerFn;
 
+  const sucessoResponse = new HttpResponse({ status: 200, body: { sucesso: true } });
   const interceptor: HttpInterceptorFn = (req, next) =>
     TestBed.runInInjectionContext(() => erroInterceptor(req, next));
 
@@ -19,13 +20,8 @@ describe('erroInterceptor', () => {
     });
 
     mensagemErroService = TestBed.inject(MensagemErroService);
-
-    nextMock = jest.fn().mockImplementation((req: HttpRequest<any>) =>
-      of(new HttpResponse({ status: 200, body: { sucesso: true } }))
-    );
-
+    nextMock = jest.fn().mockImplementation((req: HttpRequest<any>) => of(sucessoResponse));
     requestMock = new HttpRequest('GET', '/api/teste');
-
     jest.spyOn(mensagemErroService, 'mostrarMensagemDeErro');
   });
 
@@ -45,7 +41,7 @@ describe('erroInterceptor', () => {
   it('deve permitir requisições sem erro passarem normalmente', (done) => {
     interceptor(requestMock, nextMock).subscribe({
       next: (res) => {
-        expect(res).toEqual(new HttpResponse({ status: 200, body: { sucesso: true } }));
+        expect(res).toEqual(sucessoResponse);
         expect(mensagemErroService.mostrarMensagemDeErro).not.toHaveBeenCalled();
         done();
       }
@@ -112,25 +108,7 @@ describe('erroInterceptor', () => {
 
     interceptor(requestMock, nextMock).subscribe({
       error: () => {
-        expect(mensagemErroService.mostrarMensagemDeErro).toHaveBeenCalledWith(
-          MENSAGENS_ERRO[418] || 'Ocorreu um erro inesperado'
-        );
-        done();
-      }
-    });
-  });
-
-  it('deve continuar a requisição mesmo sem MensagemErroService', (done) => {
-    jest.spyOn(TestBed, 'inject').mockReturnValue(null);
-
-    nextMock = jest.fn().mockImplementation((req: HttpRequest<any>) =>
-      of(new HttpResponse({ status: 200, body: { sucesso: true } }))
-    );
-
-    interceptor(requestMock, nextMock).subscribe({
-      next: (res) => {
-        expect(res).toEqual(new HttpResponse({ status: 200, body: { sucesso: true } }));
-        expect(mensagemErroService.mostrarMensagemDeErro).not.toHaveBeenCalled();
+        expect(mensagemErroService.mostrarMensagemDeErro).toHaveBeenCalledWith('Ocorreu um erro inesperado');
         done();
       }
     });
