@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { erroInterceptor, MENSAGENS_ERRO } from './erro.interceptor';
 import { of, throwError } from 'rxjs';
 import { MensagemErroService } from '../services/mensagem-erro.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 describe('erroInterceptor', () => {
   let mensagemErroService: MensagemErroService;
@@ -16,7 +17,15 @@ describe('erroInterceptor', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [MensagemErroService]
+      providers: [
+        MensagemErroService,
+        {
+          provide: MatSnackBar,
+          useValue: {
+            open: jest.fn()
+          }
+        }
+      ]
     });
 
     mensagemErroService = TestBed.inject(MensagemErroService);
