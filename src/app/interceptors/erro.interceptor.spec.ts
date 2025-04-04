@@ -113,4 +113,29 @@ describe('erroInterceptor', () => {
       }
     });
   });
+
+  //versão com forEach para testar múltiplos códigos de status
+  const errosEsperados = [
+    { status: 0, mensagem: MENSAGENS_ERRO[0] },
+    { status: 404, mensagem: MENSAGENS_ERRO[404] },
+    { status: 500, mensagem: MENSAGENS_ERRO[500] },
+    { status: 403, mensagem: MENSAGENS_ERRO[403] },
+    { status: 401, mensagem: MENSAGENS_ERRO[401] },
+    { status: 418, mensagem: 'Ocorreu um erro inesperado' }
+  ];
+
+  errosEsperados.forEach(({ status, mensagem }) => {
+    it(`deve capturar erro ${status} e exibir a mensagem correta`, (done) => {
+      nextMock = jest.fn().mockReturnValue(
+        throwError(() => new HttpErrorResponse({ status }))
+      );
+
+      interceptor(requestMock, nextMock).subscribe({
+        error: () => {
+          expect(mensagemErroService.mostrarMensagemDeErro).toHaveBeenCalledWith(mensagem);
+          done();
+        }
+      });
+    });
+  });
 });
